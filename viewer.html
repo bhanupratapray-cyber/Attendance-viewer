@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Portal</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; max-width: 500px; width: 100%; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); text-align: center; }
+        h1, h2 { color: #2c3e50; margin-bottom: 20px; }
+        
+        .role-btn { display: block; width: 100%; padding: 15px; margin-bottom: 15px; border: 2px solid #3498db; background: white; color: #3498db; font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .role-btn:hover { background: #3498db; color: white; }
+        
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        .submit-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; font-size: 1.1rem; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .submit-btn:hover { background: #27ae60; }
+        .back-btn { background: none; border: none; color: #7f8c8d; cursor: pointer; margin-bottom: 15px; font-size: 0.9rem; text-decoration: underline; text-align: left; display: block;}
+
+        /* Student Grid */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .stat-card { background: #f8f9fa; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
+        .percentage-card { grid-column: span 2; background: #3498db; color: white; border: none; }
+        
+        /* Teacher Date Boxes (Bird's Eye View) */
+        .date-box { cursor: pointer; transition: 0.2s; border-left: 5px solid #3498db; padding: 15px; }
+        .date-box:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-color: #2ecc71; }
+        .date-stats { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.9rem; }
+        
+        /* Lists */
+        .history-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; font-size: 0.95rem; text-align: left;}
+        .status-present { color: #27ae60; font-weight: bold; }
+        .status-absent { color: #e74c3c; font-weight: bold; }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- SCREEN 1: ROLE SELECTION -->
+        <div id="role-screen">
+            <h1>Welcome</h1>
+            <p style="color: #7f8c8d; margin-bottom: 30px;">Select your portal.</p>
+            <button class="role-btn" onclick="showScreen('student-login')">👨‍🎓 I am a Student</button>
+            <button class="role-btn" onclick="showScreen('teacher-login')">👨‍🏫 I am a Teacher</button>
+        </div>
+
+        <!-- SCREEN 2: STUDENT LOGIN -->
+        <div id="student-login" class="hidden">
+            <button class="back-btn" onclick="showScreen('role-screen')">← Back to Menu</button>
+            <h2>Student Portal</h2>
+            <input type="text" id="studentId" placeholder="Enter Enrollment Number" oninput="this.value = this.value.toUpperCase()">
+            <button class="submit-btn" onclick="fetchAttendance('student')">View Report</button>
+        </div>
+
+        <!-- SCREEN 3: TEACHER LOGIN -->
+        <div id="teacher-login" class="hidden">
+            <button class="back-btn" onclick="showScreen('role-screen')">← Back to Menu</button>
+            <h2>Teacher Portal</h2>
+            <!-- UPPERCASE REMOVED HERE -->
+            <input type="text" id="teacherId" placeholder="Enter Teacher ID">
+            <input type="password" id="teacherPin" placeholder="Enter 4-Digit PIN">
+            <button class="submit-btn" onclick="fetchAttendance('teacher')">View Dashboard</button>
+            <p id="loading-text" style="color: #3498db; font-weight: bold;" class="hidden">Loading Database...</p>
+        </div>
+
+        <!-- SCREEN 4: STUDENT DASHBOARD -->
+        <div id="student-dashboard" class="hidden">
+            <button class="back-btn" onclick="resetPortal()">← Log Out</button>
+            <h2 id="student-welcome" style="margin-top: 0;">Your Attendance</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card percentage-card">
+                    <h2 id="perc">0%</h2><p>Total Attendance</p>
+                </div>
+                <div class="stat-card">
+                    <h2 id="pres">0</h2><p>Present</p>
+                </div>
+                <div class="stat-card">
+                    <h2 id="abs">0</h2><p>Absent</p>
+                </div>
+            </div>
+
+            <select id="monthFilter" onchange="applyStudentFilters()" style="margin-top: 20px;">
+                <option value="all">All Months</option>
+                <option value="0">January</option><option value="1">February</option><option value="2">March</option>
+                <option value="3">April</option><option value="4">May</option><option value="5">June</option>
+                <option value="6">July</option><option value="7">August</option><option value="8">September</option>
+                <option value="9">October</option><option value="10">November</option><option value="11">December</option>
+            </select>
+
+            <div style="margin-top: 20px; text-align: left;">
+                <h3 style="color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 5px;">History</h3>
+                <div id="student-log-list"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN 5: TEACHER DASHBOARD (The Bird's Eye View) -->
+        <div id="teacher-dashboard" class="hidden">
+            <button class="back-btn" onclick="resetPortal()">← Log Out</button>
+            <h2 id="teacher-welcome" style="margin-top: 0;">Teacher Dashboard</h2>
+            
+            <!-- Grid View (Select Semester) -->
+            <div id="teacher-grid-view">
+                <select id="teacherBatchSelect" onchange="renderTeacherGrid()"></select>
+                <div id="teacher-grid" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Date Boxes will appear here -->
+                </div>
+            </div>
+
+            <!-- Detailed Day View (Hidden until a Date Box is clicked) -->
+            <div id="teacher-day-view" class="hidden">
+                <button class="submit-btn" style="background: #3498db; margin-bottom: 15px;" onclick="closeDayView()">↑ Back to Calendar Grid</button>
+                <h3 id="day-view-title" style="color: #2c3e50; text-align: left; border-bottom: 2px solid #eee; padding-bottom: 5px;"></h3>
+                <div id="day-view-list">
+                    <!-- Student list will appear here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // *** PASTE YOUR NEW GOOGLE WEB APP URL HERE ***
+        const GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbxC52QjG70vEclTenjjaumbHvH3DSApGcdoFJaBZx1Vfk2gO_kPdlPnT5XoUQS2SdLj/exec"; 
+        let allRecords = [];
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.container > div').forEach(div => div.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function resetPortal() {
+            document.getElementById('studentId').value = "";
+            document.getElementById('teacherId').value = "";
+            document.getElementById('teacherPin').value = "";
+            showScreen('role-screen');
+        }
+
+        async function fetchAttendance(role) {
+            let id = "", pin = "";
+            document.getElementById('loading-text').classList.remove('hidden');
+
+            if (role === 'student') {
+                id = document.getElementById('studentId').value.trim().toUpperCase();
+                if (!id) return alert("Please enter your Enrollment Number.");
+            } else {
+                id = document.getElementById('teacherId').value.trim(); // No uppercase!
+                pin = document.getElementById('teacherPin').value.trim();
+                if (!id || !pin) return alert("Please enter both ID and PIN.");
+            }
+
+            try {
+                const response = await fetch(GOOGLE_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: "getUserReport", userId: id, role: role, pin: pin })
+                });
+                const data = await response.json();
+                
+                document.getElementById('loading-text').classList.add('hidden');
+
+                if(data.status === 'success') {
+                    if (data.records.length > 0) {
+                        allRecords = data.records;
+                        
+                        // Route to correct dashboard
+                        if(role === 'student') {
+                            document.getElementById('student-welcome').innerText = `Report for: ${id}`;
+                            showScreen('student-dashboard');
+                            applyStudentFilters();
+                        } else {
+                            document.getElementById('teacher-welcome').innerText = `Welcome, ${id} Sir`;
+                            showScreen('teacher-dashboard');
+                            setupTeacherDashboard();
+                        }
+                    } else {
+                        alert("No records found.");
+                    }
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (e) {
+                document.getElementById('loading-text').classList.add('hidden');
+                alert("Connection failed.");
+            }
+        }
+
+        // ==========================================
+        // STUDENT LOGIC
+        // ==========================================
+        function applyStudentFilters() {
+            const month = document.getElementById('monthFilter').value;
+            const logList = document.getElementById('student-log-list');
+            logList.innerHTML = "";
+
+            let p = 0, a = 0;
+            allRecords.forEach(rec => {
+                const recDate = new Date(rec.date);
+                if (month !== "all" && recDate.getMonth() != month) return;
+
+                const isPresent = rec.status.toUpperCase() === 'PRESENT';
+                if(isPresent) p++; else a++;
+                
+                logList.innerHTML += `
+                    <div class="history-item">
+                        <span>${recDate.toDateString()}</span>
+                        <span class="${isPresent ? 'status-present' : 'status-absent'}">${rec.status}</span>
+                    </div>`;
+            });
+
+            const total = p + a;
+            document.getElementById('perc').innerText = total > 0 ? ((p / total) * 100).toFixed(1) + "%" : "0%";
+            document.getElementById('pres').innerText = p;
+            document.getElementById('abs').innerText = a;
+        }
+
+        // ==========================================
+        // TEACHER LOGIC
+        // ==========================================
+        function setupTeacherDashboard() {
+            closeDayView();
+            // Get unique batches/semesters
+            const batches = [...new Set(allRecords.map(r => r.batch))];
+            const select = document.getElementById('teacherBatchSelect');
+            
+            select.innerHTML = '<option value="">-- Select Semester / Batch --</option>';
+            batches.forEach(b => {
+                select.innerHTML += `<option value="${b}">${b}</option>`;
+            });
+            document.getElementById('teacher-grid').innerHTML = '';
+        }
+
+        function renderTeacherGrid() {
+            const selectedBatch = document.getElementById('teacherBatchSelect').value;
+            const grid = document.getElementById('teacher-grid');
+            grid.innerHTML = '';
+            if (!selectedBatch) return;
+
+            // Group records by Date
+            const batchRecords = allRecords.filter(r => r.batch === selectedBatch);
+            const groupedByDate = {};
+            
+            batchRecords.forEach(r => {
+                const dateStr = new Date(r.date).toDateString();
+                if (!groupedByDate[dateStr]) groupedByDate[dateStr] = [];
+                groupedByDate[dateStr].push(r);
+            });
+
+            // Create a Box for each Date
+            for (const [date, records] of Object.entries(groupedByDate)) {
+                let p = 0, a = 0;
+                records.forEach(r => {
+                    if(r.status.toUpperCase() === 'PRESENT') p++; else a++;
+                });
+
+                const box = document.createElement('div');
+                box.className = 'stat-card date-box';
+                box.innerHTML = `
+                    <h3 style="margin: 0; color: #2c3e50; text-align: left;">📅 ${date}</h3>
+                    <div class="date-stats">
+                        <div style="color: #7f8c8d;"><b>${records.length}</b><br>Students</div>
+                        <div style="color: #27ae60;"><b>${p}</b><br>Present</div>
+                        <div style="color: #e74c3c;"><b>${a}</b><br>Absent</div>
+                    </div>
+                `;
+                // Click to open detailed view
+                box.onclick = () => renderDayView(date, records);
+                grid.appendChild(box);
+            }
+        }
+
+        function renderDayView(date, records) {
+            document.getElementById('teacher-grid-view').classList.add('hidden');
+            document.getElementById('teacher-day-view').classList.remove('hidden');
+            
+            document.getElementById('day-view-title').innerText = `Class Log: ${date}`;
+            const list = document.getElementById('day-view-list');
+            list.innerHTML = '';
+            
+            records.forEach(r => {
+                const isPresent = r.status.toUpperCase() === 'PRESENT';
+                // Remove leading zeros for clean display
+                const cleanEnrollment = parseInt(r.enrollment.slice(-3), 10) || r.enrollment;
+                
+                list.innerHTML += `
+                    <div class="history-item">
+                        <div>
+                            <span style="color: #7f8c8d; font-size: 0.8rem;">#${cleanEnrollment}</span><br>
+                            <b>${r.name}</b>
+                        </div>
+                        <span class="${isPresent ? 'status-present' : 'status-absent'}">${r.status}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function closeDayView() {
+            document.getElementById('teacher-grid-view').classList.remove('hidden');
+            document.getElementById('teacher-day-view').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
