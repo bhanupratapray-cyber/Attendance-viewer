@@ -4,16 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance Portal</title>
+    <!-- html2pdf library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .container { background: white; max-width: 500px; width: 100%; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); text-align: center; }
+        .container { background: white; max-width: 600px; width: 100%; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); text-align: center; }
         h1, h2 { color: #2c3e50; margin-bottom: 20px; }
         
         .role-btn { display: block; width: 100%; padding: 15px; margin-bottom: 15px; border: 2px solid #3498db; background: white; color: #3498db; font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .role-btn:hover { background: #3498db; color: white; }
         
         input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
-        .submit-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; font-size: 1.1rem; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .submit-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; font-size: 1.1rem; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.2s;}
         .submit-btn:hover { background: #27ae60; }
         .back-btn { background: none; border: none; color: #7f8c8d; cursor: pointer; margin-bottom: 15px; font-size: 0.9rem; text-decoration: underline; text-align: left; display: block;}
 
@@ -25,13 +28,26 @@
         /* Teacher Date Boxes (Bird's Eye View) */
         .date-box { cursor: pointer; transition: 0.2s; border-left: 5px solid #3498db; padding: 15px; }
         .date-box:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-color: #2ecc71; }
-        .date-stats { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.9rem; }
+        .date-stats { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.85rem; }
         
-        /* Lists */
+        /* Lists & Tables */
         .history-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; font-size: 0.95rem; text-align: left;}
         .status-present { color: #27ae60; font-weight: bold; }
         .status-absent { color: #e74c3c; font-weight: bold; }
+        .status-leave { color: #f39c12; font-weight: bold; } /* New Leave Color */
         
+        /* Teacher Tabs */
+        .tab-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: #eee; cursor: pointer; border-radius: 6px; font-weight: bold; color: #7f8c8d; }
+        .tab-btn.active { background: #3498db; color: white; }
+
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
+        .report-table th, .report-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .report-table th { background-color: #f4f7f6; color: #2c3e50; }
+
+        .filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px;}
+        .filter-row input { margin: 0; }
+
         .hidden { display: none; }
     </style>
 </head>
@@ -58,7 +74,6 @@
         <div id="teacher-login" class="hidden">
             <button class="back-btn" onclick="showScreen('role-screen')">← Back to Menu</button>
             <h2>Teacher Portal</h2>
-            <!-- UPPERCASE REMOVED HERE -->
             <input type="text" id="teacherId" placeholder="Enter Teacher ID">
             <input type="password" id="teacherPin" placeholder="Enter 4-Digit PIN">
             <button class="submit-btn" onclick="fetchAttendance('teacher')">View Dashboard</button>
@@ -96,25 +111,60 @@
             </div>
         </div>
 
-        <!-- SCREEN 5: TEACHER DASHBOARD (The Bird's Eye View) -->
+        <!-- SCREEN 5: TEACHER DASHBOARD -->
         <div id="teacher-dashboard" class="hidden">
             <button class="back-btn" onclick="resetPortal()">← Log Out</button>
             <h2 id="teacher-welcome" style="margin-top: 0;">Teacher Dashboard</h2>
             
-            <!-- Grid View (Select Semester) -->
-            <div id="teacher-grid-view">
-                <select id="teacherBatchSelect" onchange="renderTeacherGrid()"></select>
-                <div id="teacher-grid" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+            <select id="teacherBatchSelect" onchange="handleBatchChange()"></select>
+
+            <!-- TABS -->
+            <div class="tab-container" id="teacher-tabs" style="display: none;">
+                <button class="tab-btn active" id="tab-daily" onclick="switchTeacherTab('daily')">📅 Daily Logs</button>
+                <button class="tab-btn" id="tab-report" onclick="switchTeacherTab('report')">📊 Overall Report</button>
+            </div>
+
+            <!-- VIEW 1: Daily Grid View -->
+            <div id="teacher-daily-view">
+                <div id="teacher-grid" style="display: flex; flex-direction: column; gap: 10px;">
                     <!-- Date Boxes will appear here -->
                 </div>
             </div>
 
-            <!-- Detailed Day View (Hidden until a Date Box is clicked) -->
+            <!-- VIEW 2: Detailed Day View (Inside Daily Logs) -->
             <div id="teacher-day-view" class="hidden">
                 <button class="submit-btn" style="background: #3498db; margin-bottom: 15px;" onclick="closeDayView()">↑ Back to Calendar Grid</button>
                 <h3 id="day-view-title" style="color: #2c3e50; text-align: left; border-bottom: 2px solid #eee; padding-bottom: 5px;"></h3>
                 <div id="day-view-list">
                     <!-- Student list will appear here -->
+                </div>
+            </div>
+
+            <!-- VIEW 3: Overall Student Report -->
+            <div id="teacher-report-view" class="hidden">
+                <div class="filter-row">
+                    <div style="flex:1;"><label style="font-size:0.8rem; color:#7f8c8d;">Start Date</label><input type="date" id="startDate" onchange="renderStudentReport()"></div>
+                    <div style="flex:1;"><label style="font-size:0.8rem; color:#7f8c8d;">End Date</label><input type="date" id="endDate" onchange="renderStudentReport()"></div>
+                </div>
+                
+                <button class="submit-btn" style="background: #e67e22; margin-bottom: 15px;" onclick="downloadPDF()">⬇ Download as PDF</button>
+
+                <div id="pdf-content" style="background: white; padding: 10px;">
+                    <h3 id="report-title" style="color: #2c3e50; text-align: left; margin-bottom: 5px;">Class Report</h3>
+                    <p id="report-date-range" style="text-align: left; font-size: 0.85rem; color: #7f8c8d; margin-top: 0;"></p>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Enrollment</th>
+                                <th>Name</th>
+                                <th>Present/Total</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-table-body">
+                            <!-- Table rows appear here -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -146,7 +196,7 @@
                 id = document.getElementById('studentId').value.trim().toUpperCase();
                 if (!id) return alert("Please enter your Enrollment Number.");
             } else {
-                id = document.getElementById('teacherId').value.trim(); // No uppercase!
+                id = document.getElementById('teacherId').value.trim(); 
                 pin = document.getElementById('teacherPin').value.trim();
                 if (!id || !pin) return alert("Please enter both ID and PIN.");
             }
@@ -164,7 +214,6 @@
                     if (data.records.length > 0) {
                         allRecords = data.records;
                         
-                        // Route to correct dashboard
                         if(role === 'student') {
                             document.getElementById('student-welcome').innerText = `Report for: ${id}`;
                             showScreen('student-dashboard');
@@ -195,17 +244,29 @@
             logList.innerHTML = "";
 
             let p = 0, a = 0;
-            allRecords.forEach(rec => {
+            
+            // SORTING DATES: Newest to oldest
+            let sortedRecords = [...allRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sortedRecords.forEach(rec => {
                 const recDate = new Date(rec.date);
                 if (month !== "all" && recDate.getMonth() != month) return;
 
-                const isPresent = rec.status.toUpperCase() === 'PRESENT';
-                if(isPresent) p++; else a++;
+                const statusUpper = rec.status.toUpperCase();
+                const isPresent = statusUpper === 'PRESENT';
+                const isLeave = statusUpper === 'LEAVE';
                 
+                if(isPresent) p++; 
+                else if (!isLeave) a++; // usually leave isn't counted as an outright absence in the total, but adjust if needed
+                
+                let statusClass = 'status-absent';
+                if (isPresent) statusClass = 'status-present';
+                if (isLeave) statusClass = 'status-leave';
+
                 logList.innerHTML += `
                     <div class="history-item">
                         <span>${recDate.toDateString()}</span>
-                        <span class="${isPresent ? 'status-present' : 'status-absent'}">${rec.status}</span>
+                        <span class="${statusClass}">${rec.status}</span>
                     </div>`;
             });
 
@@ -220,7 +281,9 @@
         // ==========================================
         function setupTeacherDashboard() {
             closeDayView();
-            // Get unique batches/semesters
+            document.getElementById('teacher-tabs').style.display = 'flex';
+            switchTeacherTab('daily'); 
+
             const batches = [...new Set(allRecords.map(r => r.batch))];
             const select = document.getElementById('teacherBatchSelect');
             
@@ -229,15 +292,39 @@
                 select.innerHTML += `<option value="${b}">${b}</option>`;
             });
             document.getElementById('teacher-grid').innerHTML = '';
+            document.getElementById('report-table-body').innerHTML = '';
         }
 
+        function handleBatchChange() {
+            renderTeacherGrid();
+            renderStudentReport();
+        }
+
+        function switchTeacherTab(tab) {
+            document.getElementById('tab-daily').classList.remove('active');
+            document.getElementById('tab-report').classList.remove('active');
+            
+            if(tab === 'daily') {
+                document.getElementById('tab-daily').classList.add('active');
+                document.getElementById('teacher-daily-view').classList.remove('hidden');
+                document.getElementById('teacher-report-view').classList.add('hidden');
+                closeDayView();
+            } else {
+                document.getElementById('tab-report').classList.add('active');
+                document.getElementById('teacher-daily-view').classList.add('hidden');
+                document.getElementById('teacher-day-view').classList.add('hidden');
+                document.getElementById('teacher-report-view').classList.remove('hidden');
+                renderStudentReport();
+            }
+        }
+
+        // --- TAB 1: DAILY VIEW ---
         function renderTeacherGrid() {
             const selectedBatch = document.getElementById('teacherBatchSelect').value;
             const grid = document.getElementById('teacher-grid');
             grid.innerHTML = '';
             if (!selectedBatch) return;
 
-            // Group records by Date
             const batchRecords = allRecords.filter(r => r.batch === selectedBatch);
             const groupedByDate = {};
             
@@ -247,11 +334,17 @@
                 groupedByDate[dateStr].push(r);
             });
 
-            // Create a Box for each Date
-            for (const [date, records] of Object.entries(groupedByDate)) {
-                let p = 0, a = 0;
+            const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+
+            sortedDates.forEach(date => {
+                const records = groupedByDate[date];
+                let p = 0, a = 0, l = 0;
+                
                 records.forEach(r => {
-                    if(r.status.toUpperCase() === 'PRESENT') p++; else a++;
+                    const st = r.status.toUpperCase();
+                    if(st === 'PRESENT') p++; 
+                    else if(st === 'LEAVE') l++; 
+                    else a++;
                 });
 
                 const box = document.createElement('div');
@@ -259,19 +352,20 @@
                 box.innerHTML = `
                     <h3 style="margin: 0; color: #2c3e50; text-align: left;">📅 ${date}</h3>
                     <div class="date-stats">
-                        <div style="color: #7f8c8d;"><b>${records.length}</b><br>Students</div>
+                        <div style="color: #34495e;"><b>${records.length}</b><br>Total Students</div>
                         <div style="color: #27ae60;"><b>${p}</b><br>Present</div>
                         <div style="color: #e74c3c;"><b>${a}</b><br>Absent</div>
+                        <div style="color: #f39c12;"><b>${l}</b><br>Leave</div>
                     </div>
                 `;
-                // Click to open detailed view
                 box.onclick = () => renderDayView(date, records);
                 grid.appendChild(box);
-            }
+            });
         }
 
         function renderDayView(date, records) {
-            document.getElementById('teacher-grid-view').classList.add('hidden');
+            document.getElementById('teacher-daily-view').classList.add('hidden');
+            document.getElementById('teacher-tabs').style.display = 'none';
             document.getElementById('teacher-day-view').classList.remove('hidden');
             
             document.getElementById('day-view-title').innerText = `Class Log: ${date}`;
@@ -279,8 +373,11 @@
             list.innerHTML = '';
             
             records.forEach(r => {
-                const isPresent = r.status.toUpperCase() === 'PRESENT';
-                // Remove leading zeros for clean display
+                const statusUpper = r.status.toUpperCase();
+                let statusClass = 'status-absent';
+                if (statusUpper === 'PRESENT') statusClass = 'status-present';
+                if (statusUpper === 'LEAVE') statusClass = 'status-leave';
+
                 const cleanEnrollment = parseInt(r.enrollment.slice(-3), 10) || r.enrollment;
                 
                 list.innerHTML += `
@@ -289,15 +386,108 @@
                             <span style="color: #7f8c8d; font-size: 0.8rem;">#${cleanEnrollment}</span><br>
                             <b>${r.name}</b>
                         </div>
-                        <span class="${isPresent ? 'status-present' : 'status-absent'}">${r.status}</span>
+                        <span class="${statusClass}">${r.status}</span>
                     </div>
                 `;
             });
         }
 
         function closeDayView() {
-            document.getElementById('teacher-grid-view').classList.remove('hidden');
+            document.getElementById('teacher-daily-view').classList.remove('hidden');
             document.getElementById('teacher-day-view').classList.add('hidden');
+            document.getElementById('teacher-tabs').style.display = 'flex'; 
+        }
+
+        // --- TAB 2: OVERALL REPORT ---
+        function renderStudentReport() {
+            const batch = document.getElementById('teacherBatchSelect').value;
+            const tbody = document.getElementById('report-table-body');
+            tbody.innerHTML = '';
+            
+            if(!batch) return;
+
+            document.getElementById('report-title').innerText = `Class Report: ${batch}`;
+            
+            let startInput = document.getElementById('startDate').value;
+            let endInput = document.getElementById('endDate').value;
+            
+            let dateText = "All Time";
+            if(startInput || endInput) {
+                dateText = `${startInput || 'Start'} to ${endInput || 'End'}`;
+            }
+            document.getElementById('report-date-range').innerText = `Date Range: ${dateText}`;
+
+            let filtered = allRecords.filter(r => r.batch === batch);
+
+            if (startInput) {
+                let sDate = new Date(startInput);
+                sDate.setHours(0,0,0,0);
+                filtered = filtered.filter(r => new Date(r.date) >= sDate);
+            }
+            if (endInput) {
+                let eDate = new Date(endInput);
+                eDate.setHours(23,59,59,999);
+                filtered = filtered.filter(r => new Date(r.date) <= eDate);
+            }
+
+            let students = {};
+            filtered.forEach(r => {
+                if(!students[r.enrollment]) {
+                    students[r.enrollment] = { name: r.name, present: 0, total: 0 };
+                }
+                
+                // Do not count 'Leave' in total classes to avoid hurting percentage, 
+                // OR count it if you want. Here we count it as a regular class they missed.
+                students[r.enrollment].total++;
+                if(r.status.toUpperCase() === 'PRESENT') {
+                    students[r.enrollment].present++;
+                }
+            });
+
+            let studentArray = Object.keys(students).map(enrollment => ({
+                enrollment: enrollment,
+                name: students[enrollment].name,
+                present: students[enrollment].present,
+                total: students[enrollment].total,
+                perc: ((students[enrollment].present / students[enrollment].total) * 100).toFixed(1)
+            }));
+            
+            studentArray.sort((a, b) => a.name.localeCompare(b.name));
+
+            studentArray.forEach(s => {
+                // Apply User's new custom color logic
+                let color = '';
+                if (s.perc >= 70) color = '#27ae60'; // Green (70 and above)
+                else if (s.perc >= 50) color = '#f39c12'; // Yellow (50 to 69)
+                else if (s.perc >= 30) color = '#8e44ad'; // Purple (30 to 49)
+                else color = '#e74c3c'; // Red (below 30)
+
+                let row = `<tr>
+                    <td style="font-size:0.8rem; color:#7f8c8d;">${s.enrollment}</td>
+                    <td style="font-weight:bold;">${s.name}</td>
+                    <td>${s.present} / ${s.total}</td>
+                    <td style="color:${color}; font-weight:bold;">${s.perc}%</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // --- PDF DOWNLOAD ---
+        function downloadPDF() {
+            const batch = document.getElementById('teacherBatchSelect').value;
+            if(!batch) return alert("Please select a Semester / Batch first.");
+
+            const element = document.getElementById('pdf-content');
+            
+            const opt = {
+                margin:       0.5,
+                filename:     `${batch}_Attendance_Report.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
         }
     </script>
 </body>
