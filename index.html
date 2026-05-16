@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance Portal</title>
-    <!-- html2pdf library for PDF generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
     
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .container { background: white; max-width: 600px; width: 100%; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); text-align: center; }
+        .container { background: white; max-width: 700px; width: 100%; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); text-align: center; }
         h1, h2 { color: #2c3e50; margin-bottom: 20px; }
         
         .role-btn { display: block; width: 100%; padding: 15px; margin-bottom: 15px; border: 2px solid #3498db; background: white; color: #3498db; font-size: 1.1rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
@@ -34,16 +33,20 @@
         .history-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; font-size: 0.95rem; text-align: left;}
         .status-present { color: #27ae60; font-weight: bold; }
         .status-absent { color: #e74c3c; font-weight: bold; }
-        .status-leave { color: #f39c12; font-weight: bold; } /* New Leave Color */
+        .status-leave { color: #f39c12; font-weight: bold; } 
         
         /* Teacher Tabs */
         .tab-container { display: flex; gap: 10px; margin-bottom: 15px; }
         .tab-btn { flex: 1; padding: 10px; border: none; background: #eee; cursor: pointer; border-radius: 6px; font-weight: bold; color: #7f8c8d; }
         .tab-btn.active { background: #3498db; color: white; }
 
-        .report-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
-        .report-table th, .report-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
+        .report-table th, .report-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         .report-table th { background-color: #f4f7f6; color: #2c3e50; }
+        .report-table td:nth-child(1), .report-table td:nth-child(2) { text-align: left; }
+        
+        /* Prevent table rows from breaking across PDF pages */
+        .report-table tr { page-break-inside: avoid; }
 
         .filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px;}
         .filter-row input { margin: 0; }
@@ -54,7 +57,6 @@
 <body>
     <div class="container">
         
-        <!-- SCREEN 1: ROLE SELECTION -->
         <div id="role-screen">
             <h1>Welcome</h1>
             <p style="color: #7f8c8d; margin-bottom: 30px;">Select your portal.</p>
@@ -62,7 +64,6 @@
             <button class="role-btn" onclick="showScreen('teacher-login')">👨‍🏫 I am a Teacher</button>
         </div>
 
-        <!-- SCREEN 2: STUDENT LOGIN -->
         <div id="student-login" class="hidden">
             <button class="back-btn" onclick="showScreen('role-screen')">← Back to Menu</button>
             <h2>Student Portal</h2>
@@ -70,7 +71,6 @@
             <button class="submit-btn" onclick="fetchAttendance('student')">View Report</button>
         </div>
 
-        <!-- SCREEN 3: TEACHER LOGIN -->
         <div id="teacher-login" class="hidden">
             <button class="back-btn" onclick="showScreen('role-screen')">← Back to Menu</button>
             <h2>Teacher Portal</h2>
@@ -80,7 +80,6 @@
             <p id="loading-text" style="color: #3498db; font-weight: bold;" class="hidden">Loading Database...</p>
         </div>
 
-        <!-- SCREEN 4: STUDENT DASHBOARD -->
         <div id="student-dashboard" class="hidden">
             <button class="back-btn" onclick="resetPortal()">← Log Out</button>
             <h2 id="student-welcome" style="margin-top: 0;">Your Attendance</h2>
@@ -111,43 +110,36 @@
             </div>
         </div>
 
-        <!-- SCREEN 5: TEACHER DASHBOARD -->
         <div id="teacher-dashboard" class="hidden">
             <button class="back-btn" onclick="resetPortal()">← Log Out</button>
             <h2 id="teacher-welcome" style="margin-top: 0;">Teacher Dashboard</h2>
             
             <select id="teacherBatchSelect" onchange="handleBatchChange()"></select>
 
-            <!-- TABS -->
             <div class="tab-container" id="teacher-tabs" style="display: none;">
                 <button class="tab-btn active" id="tab-daily" onclick="switchTeacherTab('daily')">📅 Daily Logs</button>
                 <button class="tab-btn" id="tab-report" onclick="switchTeacherTab('report')">📊 Overall Report</button>
             </div>
 
-            <!-- VIEW 1: Daily Grid View -->
             <div id="teacher-daily-view">
                 <div id="teacher-grid" style="display: flex; flex-direction: column; gap: 10px;">
-                    <!-- Date Boxes will appear here -->
-                </div>
+                    </div>
             </div>
 
-            <!-- VIEW 2: Detailed Day View (Inside Daily Logs) -->
             <div id="teacher-day-view" class="hidden">
                 <button class="submit-btn" style="background: #3498db; margin-bottom: 15px;" onclick="closeDayView()">↑ Back to Calendar Grid</button>
                 <h3 id="day-view-title" style="color: #2c3e50; text-align: left; border-bottom: 2px solid #eee; padding-bottom: 5px;"></h3>
                 <div id="day-view-list">
-                    <!-- Student list will appear here -->
-                </div>
+                    </div>
             </div>
 
-            <!-- VIEW 3: Overall Student Report -->
             <div id="teacher-report-view" class="hidden">
                 <div class="filter-row">
                     <div style="flex:1;"><label style="font-size:0.8rem; color:#7f8c8d;">Start Date</label><input type="date" id="startDate" onchange="renderStudentReport()"></div>
                     <div style="flex:1;"><label style="font-size:0.8rem; color:#7f8c8d;">End Date</label><input type="date" id="endDate" onchange="renderStudentReport()"></div>
                 </div>
                 
-                <button class="submit-btn" style="background: #e67e22; margin-bottom: 15px;" onclick="downloadPDF()">⬇ Download as PDF</button>
+                <button class="submit-btn" style="background: #e67e22; margin-bottom: 15px;" onclick="downloadPDF(this)">⬇ Download as PDF</button>
 
                 <div id="pdf-content" style="background: white; padding: 10px;">
                     <h3 id="report-title" style="color: #2c3e50; text-align: left; margin-bottom: 5px;">Class Report</h3>
@@ -157,13 +149,14 @@
                             <tr>
                                 <th>Enrollment</th>
                                 <th>Name</th>
-                                <th>Present/Total</th>
+                                <th>Total Classes</th>
+                                <th>Present</th>
+                                <th>Leave</th>
                                 <th>Percentage</th>
                             </tr>
                         </thead>
                         <tbody id="report-table-body">
-                            <!-- Table rows appear here -->
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
             </div>
@@ -257,7 +250,7 @@
                 const isLeave = statusUpper === 'LEAVE';
                 
                 if(isPresent) p++; 
-                else if (!isLeave) a++; // usually leave isn't counted as an outright absence in the total, but adjust if needed
+                else if (!isLeave) a++; 
                 
                 let statusClass = 'status-absent';
                 if (isPresent) statusClass = 'status-present';
@@ -433,14 +426,16 @@
             let students = {};
             filtered.forEach(r => {
                 if(!students[r.enrollment]) {
-                    students[r.enrollment] = { name: r.name, present: 0, total: 0 };
+                    students[r.enrollment] = { name: r.name, present: 0, leave: 0, total: 0 };
                 }
                 
-                // Do not count 'Leave' in total classes to avoid hurting percentage, 
-                // OR count it if you want. Here we count it as a regular class they missed.
                 students[r.enrollment].total++;
-                if(r.status.toUpperCase() === 'PRESENT') {
+                
+                const stat = r.status.toUpperCase();
+                if(stat === 'PRESENT') {
                     students[r.enrollment].present++;
+                } else if (stat === 'LEAVE') {
+                    students[r.enrollment].leave++;
                 }
             });
 
@@ -448,24 +443,27 @@
                 enrollment: enrollment,
                 name: students[enrollment].name,
                 present: students[enrollment].present,
+                leave: students[enrollment].leave,
                 total: students[enrollment].total,
                 perc: ((students[enrollment].present / students[enrollment].total) * 100).toFixed(1)
             }));
             
-            studentArray.sort((a, b) => a.name.localeCompare(b.name));
+            // SORTING CHANGED HERE: Now sorts by Enrollment instead of Name
+            studentArray.sort((a, b) => a.enrollment.localeCompare(b.enrollment));
 
             studentArray.forEach(s => {
-                // Apply User's new custom color logic
                 let color = '';
-                if (s.perc >= 70) color = '#27ae60'; // Green (70 and above)
-                else if (s.perc >= 50) color = '#f39c12'; // Yellow (50 to 69)
-                else if (s.perc >= 30) color = '#8e44ad'; // Purple (30 to 49)
-                else color = '#e74c3c'; // Red (below 30)
+                if (s.perc >= 70) color = '#27ae60'; 
+                else if (s.perc >= 50) color = '#f39c12'; 
+                else if (s.perc >= 30) color = '#8e44ad'; 
+                else color = '#e74c3c'; 
 
                 let row = `<tr>
                     <td style="font-size:0.8rem; color:#7f8c8d;">${s.enrollment}</td>
                     <td style="font-weight:bold;">${s.name}</td>
-                    <td>${s.present} / ${s.total}</td>
+                    <td style="color:#34495e; font-weight:bold;">${s.total}</td>
+                    <td style="color:#27ae60; font-weight:bold;">${s.present}</td>
+                    <td style="color:#f39c12; font-weight:bold;">${s.leave}</td>
                     <td style="color:${color}; font-weight:bold;">${s.perc}%</td>
                 </tr>`;
                 tbody.innerHTML += row;
@@ -473,21 +471,45 @@
         }
 
         // --- PDF DOWNLOAD ---
-        function downloadPDF() {
+        function downloadPDF(btnElement) {
             const batch = document.getElementById('teacherBatchSelect').value;
             if(!batch) return alert("Please select a Semester / Batch first.");
 
             const element = document.getElementById('pdf-content');
             
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "⏳ Generating PDF... Please wait.";
+            btnElement.style.opacity = "0.7";
+            btnElement.disabled = true;
+            
             const opt = {
                 margin:       0.5,
                 filename:     `${batch}_Attendance_Report.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                html2canvas:  { scale: 2, useCORS: true }, 
+                // FORMAT CHANGED TO A4, Added pagebreak rule to avoid breaking table rows
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: 'avoid-all', avoid: 'tr' }
             };
 
-            html2pdf().set(opt).from(element).save();
+            try {
+                html2pdf().set(opt).from(element).save().then(() => {
+                    btnElement.innerText = originalText;
+                    btnElement.style.opacity = "1";
+                    btnElement.disabled = false;
+                }).catch(err => {
+                    console.error("PDF Generation Error: ", err);
+                    alert("Something went wrong generating the PDF. Check the browser console.");
+                    btnElement.innerText = originalText;
+                    btnElement.style.opacity = "1";
+                    btnElement.disabled = false;
+                });
+            } catch (e) {
+                alert("The PDF library failed to load. Please check your internet connection.");
+                btnElement.innerText = originalText;
+                btnElement.style.opacity = "1";
+                btnElement.disabled = false;
+            }
         }
     </script>
 </body>
