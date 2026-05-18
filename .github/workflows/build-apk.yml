@@ -1,0 +1,51 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch: # This adds a manual "Run workflow" button
+  push:
+    branches:
+      - main # Automatically builds when you push new code
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      - name: Build the APK
+        run: |
+          # 1. Create a new Cordova project
+          cordova create app com.school.attendanceportal "AttendancePortal"
+          
+          # 2. Clear default Cordova web files
+          rm -rf app/www/*
+          
+          # 3. Copy your HTML and any icons into the app
+          cp index.html app/www/
+          
+          # 4. Add the Android platform and build
+          cd app
+          cordova platform add android
+          cordova build android
+
+      - name: Upload APK to Actions Tab
+        uses: actions/upload-artifact@v4
+        with:
+          name: Attendance-Portal-APK
+          path: app/platforms/android/app/build/outputs/apk/debug/app-debug.apk
