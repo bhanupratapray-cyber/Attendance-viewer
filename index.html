@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance Portal</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3498db">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
     
     <style>
@@ -17,6 +22,7 @@
         input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
         .submit-btn { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 6px; font-size: 1.1rem; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.2s;}
         .submit-btn:hover { background: #27ae60; }
+        .submit-btn:disabled { background: #95a5a6; cursor: not-allowed; }
         .back-btn { background: none; border: none; color: #7f8c8d; cursor: pointer; margin-bottom: 15px; font-size: 0.9rem; text-decoration: underline; text-align: left; display: block;}
 
         /* Student Grid */
@@ -45,7 +51,6 @@
         .report-table th { background-color: #f4f7f6; color: #2c3e50; }
         .report-table td:nth-child(1), .report-table td:nth-child(2) { text-align: left; }
         
-        /* Prevent table rows from breaking across PDF pages */
         .report-table tr { page-break-inside: avoid; }
 
         .filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px;}
@@ -68,7 +73,8 @@
             <button class="back-btn" onclick="showScreen('role-screen')">← Back to Menu</button>
             <h2>Student Portal</h2>
             <input type="text" id="studentId" placeholder="Enter Enrollment Number" oninput="this.value = this.value.toUpperCase()">
-            <button class="submit-btn" onclick="fetchAttendance('student')">View Report</button>
+            <button id="student-submit-btn" class="submit-btn" onclick="fetchAttendance('student')">View Report</button>
+            <p id="student-loading-text" style="color: #3498db; font-weight: bold;" class="hidden">⏳ Fetching your records...</p>
         </div>
 
         <div id="teacher-login" class="hidden">
@@ -76,8 +82,8 @@
             <h2>Teacher Portal</h2>
             <input type="text" id="teacherId" placeholder="Enter Teacher ID">
             <input type="password" id="teacherPin" placeholder="Enter 4-Digit PIN">
-            <button class="submit-btn" onclick="fetchAttendance('teacher')">View Dashboard</button>
-            <p id="loading-text" style="color: #3498db; font-weight: bold;" class="hidden">Loading Database...</p>
+            <button id="teacher-submit-btn" class="submit-btn" onclick="fetchAttendance('teacher')">View Dashboard</button>
+            <p id="loading-text" style="color: #3498db; font-weight: bold;" class="hidden">⏳ Loading Database...</p>
         </div>
 
         <div id="student-dashboard" class="hidden">
@@ -165,9 +171,19 @@
     </div>
 
     <script>
-        // *** PASTE YOUR NEW GOOGLE WEB APP URL HERE ***
         const GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbxC52QjG70vEclTenjjaumbHvH3DSApGcdoFJaBZx1Vfk2gO_kPdlPnT5XoUQS2SdLj/exec"; 
         let allRecords = [];
+
+        // --- PWA Service Worker Registration ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful');
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
 
         function showScreen(screenId) {
             document.querySelectorAll('.container > div').forEach(div => div.classList.add('hidden'));
@@ -183,15 +199,19 @@
 
         async function fetchAttendance(role) {
             let id = "", pin = "";
-            document.getElementById('loading-text').classList.remove('hidden');
-
+            
+            // Show loading indicators based on role
             if (role === 'student') {
                 id = document.getElementById('studentId').value.trim().toUpperCase();
                 if (!id) return alert("Please enter your Enrollment Number.");
+                document.getElementById('student-submit-btn').disabled = true;
+                document.getElementById('student-loading-text').classList.remove('hidden');
             } else {
                 id = document.getElementById('teacherId').value.trim(); 
                 pin = document.getElementById('teacherPin').value.trim();
                 if (!id || !pin) return alert("Please enter both ID and PIN.");
+                document.getElementById('teacher-submit-btn').disabled = true;
+                document.getElementById('loading-text').classList.remove('hidden');
             }
 
             try {
@@ -201,7 +221,11 @@
                 });
                 const data = await response.json();
                 
+                // Hide loading indicators
+                document.getElementById('student-loading-text').classList.add('hidden');
                 document.getElementById('loading-text').classList.add('hidden');
+                document.getElementById('student-submit-btn').disabled = false;
+                document.getElementById('teacher-submit-btn').disabled = false;
 
                 if(data.status === 'success') {
                     if (data.records.length > 0) {
@@ -223,7 +247,10 @@
                     alert("Error: " + data.message);
                 }
             } catch (e) {
+                document.getElementById('student-loading-text').classList.add('hidden');
                 document.getElementById('loading-text').classList.add('hidden');
+                document.getElementById('student-submit-btn').disabled = false;
+                document.getElementById('teacher-submit-btn').disabled = false;
                 alert("Connection failed.");
             }
         }
@@ -238,7 +265,6 @@
 
             let p = 0, a = 0;
             
-            // SORTING DATES: Newest to oldest
             let sortedRecords = [...allRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
 
             sortedRecords.forEach(rec => {
@@ -311,7 +337,6 @@
             }
         }
 
-        // --- TAB 1: DAILY VIEW ---
         function renderTeacherGrid() {
             const selectedBatch = document.getElementById('teacherBatchSelect').value;
             const grid = document.getElementById('teacher-grid');
@@ -391,7 +416,6 @@
             document.getElementById('teacher-tabs').style.display = 'flex'; 
         }
 
-        // --- TAB 2: OVERALL REPORT ---
         function renderStudentReport() {
             const batch = document.getElementById('teacherBatchSelect').value;
             const tbody = document.getElementById('report-table-body');
@@ -448,7 +472,6 @@
                 perc: ((students[enrollment].present / students[enrollment].total) * 100).toFixed(1)
             }));
             
-            // SORTING CHANGED HERE: Now sorts by Enrollment instead of Name
             studentArray.sort((a, b) => a.enrollment.localeCompare(b.enrollment));
 
             studentArray.forEach(s => {
@@ -470,7 +493,6 @@
             });
         }
 
-        // --- PDF DOWNLOAD ---
         function downloadPDF(btnElement) {
             const batch = document.getElementById('teacherBatchSelect').value;
             if(!batch) return alert("Please select a Semester / Batch first.");
@@ -487,7 +509,6 @@
                 filename:     `${batch}_Attendance_Report.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true }, 
-                // FORMAT CHANGED TO A4, Added pagebreak rule to avoid breaking table rows
                 jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
                 pagebreak:    { mode: 'avoid-all', avoid: 'tr' }
             };
