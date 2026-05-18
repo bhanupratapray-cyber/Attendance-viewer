@@ -25,12 +25,30 @@
         .submit-btn:disabled { background: #95a5a6; cursor: not-allowed; }
         .back-btn { background: none; border: none; color: #7f8c8d; cursor: pointer; margin-bottom: 15px; font-size: 0.9rem; text-decoration: underline; text-align: left; display: block;}
 
-        /* Student Grid */
+        /* Student Stats Grid */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
         .stat-card { background: #f8f9fa; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
         .percentage-card { grid-column: span 2; background: #3498db; color: white; border: none; }
         
-        /* Teacher Date Boxes (Bird's Eye View) */
+        /* STUDENT CALENDAR Grid */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 15px; }
+        .calendar-header { font-weight: bold; color: #7f8c8d; font-size: 0.85rem; padding-bottom: 5px; border-bottom: 1px solid #eee; }
+        .calendar-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #eee; background: #fff; position: relative; transition: 0.2s; }
+        .calendar-day.empty { background: transparent; border: none; }
+        .calendar-day .date-num { font-size: 0.85rem; font-weight: bold; color: #2c3e50; }
+        .calendar-day .status-ind { font-size: 0.75rem; font-weight: bold; margin-top: 2px; }
+        
+        /* Calendar Status Colors */
+        .cal-present { background: #eafaf1; border-color: #27ae60; }
+        .cal-present .status-ind { color: #27ae60; }
+        .cal-absent { background: #fdedec; border-color: #e74c3c; }
+        .cal-absent .status-ind { color: #e74c3c; }
+        .cal-leave { background: #fef5e7; border-color: #f39c12; }
+        .cal-leave .status-ind { color: #f39c12; }
+        .cal-sunday { background: #fdf2e9; } 
+        .cal-sunday .date-num { color: #e67e22; }
+        
+        /* Teacher Date Boxes */
         .date-box { cursor: pointer; transition: 0.2s; border-left: 5px solid #3498db; padding: 15px; }
         .date-box:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-color: #2ecc71; }
         .date-stats { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.85rem; }
@@ -56,15 +74,44 @@
         .filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px;}
         .filter-row input { margin: 0; }
 
-        .hidden { display: none; }
+        .hidden { display: none !important; }
+
+        /* --- PROFESSIONAL EASTER EGG CSS --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(2px); }
+        .modal-content { background: white; padding: 40px 30px; border-radius: 8px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-width: 320px; border-top: 4px solid #3498db; animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        .secret-trigger { cursor: default; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .dev-icon { width: 48px; height: 48px; background: #f0f7fb; color: #3498db; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 15px auto; }
     </style>
 </head>
 <body>
+
+    <div id="easter-egg-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="dev-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+            </div>
+            <h3 style="color: #2c3e50; margin-top: 0; margin-bottom: 8px; font-size: 1.25rem;">System Information</h3>
+            <p style="color: #7f8c8d; line-height: 1.6; font-size: 0.95rem; margin-bottom: 25px;">
+                Attendance Portal v1.0<br>
+                Designed and Engineered by<br>
+                <strong style="color: #2c3e50; font-size: 1.1rem; display: block; margin-top: 5px;">Bhanupratap Ray</strong>
+            </p>
+            <button class="submit-btn" style="background: #34495e; padding: 10px; font-size: 1rem;" onclick="closeEasterEgg()">Close</button>
+        </div>
+    </div>
+
     <div class="container">
         
         <div id="role-screen">
-            <h1>Welcome</h1>
-            <p style="color: #7f8c8d; margin-bottom: 30px;">Select your portal.</p>
+            <div class="secret-trigger" onclick="checkEasterEgg()">
+                <h1>Welcome</h1>
+                <p style="color: #7f8c8d; margin-bottom: 30px;">Select your portal.</p>
+            </div>
+            
             <button class="role-btn" onclick="showScreen('student-login')">👨‍🎓 I am a Student</button>
             <button class="role-btn" onclick="showScreen('teacher-login')">👨‍🏫 I am a Teacher</button>
         </div>
@@ -92,7 +139,7 @@
             
             <div class="stats-grid">
                 <div class="stat-card percentage-card">
-                    <h2 id="perc">0%</h2><p>Total Attendance</p>
+                    <h2 id="perc">0%</h2><p id="perc-label">Monthly Attendance</p>
                 </div>
                 <div class="stat-card">
                     <h2 id="pres">0</h2><p>Present</p>
@@ -103,7 +150,7 @@
             </div>
 
             <select id="monthFilter" onchange="applyStudentFilters()" style="margin-top: 20px;">
-                <option value="all">All Months</option>
+                <option value="all">All Time / Total Logs</option>
                 <option value="0">January</option><option value="1">February</option><option value="2">March</option>
                 <option value="3">April</option><option value="4">May</option><option value="5">June</option>
                 <option value="6">July</option><option value="7">August</option><option value="8">September</option>
@@ -111,8 +158,10 @@
             </select>
 
             <div style="margin-top: 20px; text-align: left;">
-                <h3 style="color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 5px;">History</h3>
-                <div id="student-log-list"></div>
+                <h3 id="history-title" style="color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 5px;">Calendar View</h3>
+                
+                <div id="student-calendar-container"></div>
+                <div id="student-log-list" class="hidden"></div>
             </div>
         </div>
 
@@ -128,15 +177,13 @@
             </div>
 
             <div id="teacher-daily-view">
-                <div id="teacher-grid" style="display: flex; flex-direction: column; gap: 10px;">
-                    </div>
+                <div id="teacher-grid" style="display: flex; flex-direction: column; gap: 10px;"></div>
             </div>
 
             <div id="teacher-day-view" class="hidden">
                 <button class="submit-btn" style="background: #3498db; margin-bottom: 15px;" onclick="closeDayView()">↑ Back to Calendar Grid</button>
                 <h3 id="day-view-title" style="color: #2c3e50; text-align: left; border-bottom: 2px solid #eee; padding-bottom: 5px;"></h3>
-                <div id="day-view-list">
-                    </div>
+                <div id="day-view-list"></div>
             </div>
 
             <div id="teacher-report-view" class="hidden">
@@ -161,12 +208,10 @@
                                 <th>Percentage</th>
                             </tr>
                         </thead>
-                        <tbody id="report-table-body">
-                            </tbody>
+                        <tbody id="report-table-body"></tbody>
                     </table>
                 </div>
             </div>
-
         </div>
     </div>
 
@@ -174,19 +219,39 @@
         const GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbxC52QjG70vEclTenjjaumbHvH3DSApGcdoFJaBZx1Vfk2gO_kPdlPnT5XoUQS2SdLj/exec"; 
         let allRecords = [];
 
-        // --- PWA Service Worker Registration ---
+        // --- EASTER EGG LOGIC ---
+        let eggClicks = 0;
+        let eggTimer;
+
+        function checkEasterEgg() {
+            eggClicks++;
+            clearTimeout(eggTimer);
+            
+            if (eggClicks >= 5) {
+                document.getElementById('easter-egg-modal').classList.remove('hidden');
+                eggClicks = 0; // reset for next time
+            } else {
+                eggTimer = setTimeout(() => { eggClicks = 0; }, 1500);
+            }
+        }
+
+        function closeEasterEgg() {
+            document.getElementById('easter-egg-modal').classList.add('hidden');
+        }
+        // ------------------------
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(registration => {
-                    console.log('ServiceWorker registration successful');
-                }, err => {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW setup skipped for now.'));
             });
         }
 
         function showScreen(screenId) {
-            document.querySelectorAll('.container > div').forEach(div => div.classList.add('hidden'));
+            document.querySelectorAll('.container > div').forEach(div => {
+                if(div.id !== 'easter-egg-modal') {
+                    div.classList.add('hidden');
+                }
+            });
             document.getElementById(screenId).classList.remove('hidden');
         }
 
@@ -200,7 +265,6 @@
         async function fetchAttendance(role) {
             let id = "", pin = "";
             
-            // Show loading indicators based on role
             if (role === 'student') {
                 id = document.getElementById('studentId').value.trim().toUpperCase();
                 if (!id) return alert("Please enter your Enrollment Number.");
@@ -221,7 +285,6 @@
                 });
                 const data = await response.json();
                 
-                // Hide loading indicators
                 document.getElementById('student-loading-text').classList.add('hidden');
                 document.getElementById('loading-text').classList.add('hidden');
                 document.getElementById('student-submit-btn').disabled = false;
@@ -233,6 +296,10 @@
                         
                         if(role === 'student') {
                             document.getElementById('student-welcome').innerText = `Report for: ${id}`;
+                            
+                            const currentMonth = new Date().getMonth();
+                            document.getElementById('monthFilter').value = currentMonth;
+                            
                             showScreen('student-dashboard');
                             applyStudentFilters();
                         } else {
@@ -255,49 +322,125 @@
             }
         }
 
-        // ==========================================
-        // STUDENT LOGIC
-        // ==========================================
         function applyStudentFilters() {
-            const month = document.getElementById('monthFilter').value;
-            const logList = document.getElementById('student-log-list');
-            logList.innerHTML = "";
+            const filterValue = document.getElementById('monthFilter').value;
+            const logContainer = document.getElementById('student-log-list');
+            const calContainer = document.getElementById('student-calendar-container');
+            const historyTitle = document.getElementById('history-title');
+            const percLabel = document.getElementById('perc-label');
 
             let p = 0, a = 0;
-            
-            let sortedRecords = [...allRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            sortedRecords.forEach(rec => {
-                const recDate = new Date(rec.date);
-                if (month !== "all" && recDate.getMonth() != month) return;
-
-                const statusUpper = rec.status.toUpperCase();
-                const isPresent = statusUpper === 'PRESENT';
-                const isLeave = statusUpper === 'LEAVE';
+            if (filterValue === 'all') {
+                logContainer.classList.remove('hidden');
+                calContainer.classList.add('hidden');
+                historyTitle.innerText = "Complete History";
+                percLabel.innerText = "Total Attendance";
                 
-                if(isPresent) p++; 
-                else if (!isLeave) a++; 
+                logContainer.innerHTML = "";
                 
-                let statusClass = 'status-absent';
-                if (isPresent) statusClass = 'status-present';
-                if (isLeave) statusClass = 'status-leave';
+                let sortedRecords = [...allRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-                logList.innerHTML += `
-                    <div class="history-item">
-                        <span>${recDate.toDateString()}</span>
-                        <span class="${statusClass}">${rec.status}</span>
-                    </div>`;
-            });
+                sortedRecords.forEach(rec => {
+                    const statusUpper = rec.status.toUpperCase();
+                    const isPresent = statusUpper === 'PRESENT';
+                    const isLeave = statusUpper === 'LEAVE';
+                    
+                    if(isPresent) p++; 
+                    else if (!isLeave) a++; 
+                    
+                    let statusClass = 'status-absent';
+                    if (isPresent) statusClass = 'status-present';
+                    if (isLeave) statusClass = 'status-leave';
 
-            const total = p + a;
-            document.getElementById('perc').innerText = total > 0 ? ((p / total) * 100).toFixed(1) + "%" : "0%";
-            document.getElementById('pres').innerText = p;
-            document.getElementById('abs').innerText = a;
+                    const recDateStr = new Date(rec.date).toDateString();
+                    logContainer.innerHTML += `
+                        <div class="history-item">
+                            <span>${recDateStr}</span>
+                            <span class="${statusClass}">${rec.status}</span>
+                        </div>`;
+                });
+
+                const total = p + a;
+                document.getElementById('perc').innerText = total > 0 ? ((p / total) * 100).toFixed(1) + "%" : "0%";
+                document.getElementById('pres').innerText = p;
+                document.getElementById('abs').innerText = a;
+
+            } else {
+                logContainer.classList.add('hidden');
+                calContainer.classList.remove('hidden');
+                historyTitle.innerText = "Calendar View";
+                percLabel.innerText = "Monthly Attendance";
+                
+                const month = parseInt(filterValue);
+                
+                let year = new Date().getFullYear();
+                if (allRecords.length > 0) {
+                    let latestRecord = [...allRecords].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+                    year = new Date(latestRecord.date).getFullYear();
+                }
+
+                let monthRecords = {}; 
+                
+                allRecords.forEach(rec => {
+                    const recDate = new Date(rec.date);
+                    if (recDate.getMonth() === month && recDate.getFullYear() === year) {
+                        const statusUpper = rec.status.toUpperCase();
+                        monthRecords[recDate.getDate()] = statusUpper;
+                        
+                        if(statusUpper === 'PRESENT') p++; 
+                        else if (statusUpper !== 'LEAVE') a++; 
+                    }
+                });
+
+                const total = p + a;
+                document.getElementById('perc').innerText = total > 0 ? ((p / total) * 100).toFixed(1) + "%" : "0%";
+                document.getElementById('pres').innerText = p;
+                document.getElementById('abs').innerText = a;
+
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const firstDayOfWeek = new Date(year, month, 1).getDay(); 
+                
+                let html = '<div class="calendar-grid">';
+                const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                dayNames.forEach(d => html += `<div class="calendar-header">${d}</div>`);
+
+                for(let i = 0; i < firstDayOfWeek; i++) {
+                    html += `<div class="calendar-day empty"></div>`;
+                }
+
+                for(let i = 1; i <= daysInMonth; i++) {
+                    const isSunday = new Date(year, month, i).getDay() === 0;
+                    const recordStatus = monthRecords[i]; 
+                    
+                    let className = 'calendar-day';
+                    let indicator = '';
+
+                    if (recordStatus === 'PRESENT') {
+                        className += ' cal-present';
+                        indicator = 'P';
+                    } else if (recordStatus === 'ABSENT') {
+                        className += ' cal-absent';
+                        indicator = 'A';
+                    } else if (recordStatus === 'LEAVE') {
+                        className += ' cal-leave';
+                        indicator = 'L';
+                    } else if (isSunday) {
+                        className += ' cal-sunday';
+                    }
+
+                    html += `
+                        <div class="${className}">
+                            <span class="date-num">${i}</span>
+                            ${indicator ? `<span class="status-ind">${indicator}</span>` : ''}
+                        </div>`;
+                }
+
+                html += '</div>';
+                document.getElementById('student-calendar-container').innerHTML = html;
+            }
         }
 
-        // ==========================================
-        // TEACHER LOGIC
-        // ==========================================
         function setupTeacherDashboard() {
             closeDayView();
             document.getElementById('teacher-tabs').style.display = 'flex';
