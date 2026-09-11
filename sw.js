@@ -1,6 +1,6 @@
 const CACHE_NAME = 'attendance-portal-v1';
 const urlsToCache = [
-  './index.html',
+  './viewwr.html',
   './manifest.json'
 ];
 
