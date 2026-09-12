@@ -1,4 +1,4 @@
-const CACHE_NAME = 'attendance-portal-v1';
+const CACHE_NAME = 'attendance-portal-v4';
 const urlsToCache = [
   './index.html',
   './manifest.json'
@@ -6,23 +6,20 @@ const urlsToCache = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(urlsToCache);
+    })
   );
 });
 
 self.addEventListener('fetch', event => {
+  // Ignore all POST requests and Google Apps Script API calls so they don't get blocked
+  if (event.request.method === 'POST' || event.request.url.includes('script.google.com')) {
+    return; 
+  }
+
+  // Handle local files (HTML, CSS, JSON) normally
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      }
-    )
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
