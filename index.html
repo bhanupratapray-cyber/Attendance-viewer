@@ -219,18 +219,6 @@
         const GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbwPah81IfMTIY4ST_A8djsJcua_ahOIzi4T_d7r8mhuFdaHXJaqIq6Ke4aUWg6HCB_A/exec"; 
         let allRecords = [];
 
-        async function fetchWithTimeout(resource, options = {}) {
-            const { timeout = 20000 } = options;
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), timeout);
-            const response = await fetch(resource, {
-                ...options,
-                signal: controller.signal
-            });
-            clearTimeout(id);
-            return response;
-        }
-
         // --- EASTER EGG LOGIC ---
         let eggClicks = 0;
         let eggTimer;
@@ -291,7 +279,7 @@
             }
 
             try {
-                const response = await fetchWithTimeout(GOOGLE_APP_URL, {
+                const response = await fetch(GOOGLE_APP_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: "getUserReport", userId: id, role: role, pin: pin })
                 });
@@ -353,48 +341,25 @@
                 
                 let sortedRecords = [...allRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-                let p = 0, a = 0;
                 sortedRecords.forEach(rec => {
                     const statusUpper = rec.status.toUpperCase();
-                    if(statusUpper === 'PRESENT') p++; 
-                    else if (statusUpper !== 'LEAVE') a++; 
+                    const isPresent = statusUpper === 'PRESENT';
+                    const isLeave = statusUpper === 'LEAVE';
+                    
+                    if(isPresent) p++; 
+                    else if (!isLeave) a++; 
+                    
+                    let statusClass = 'status-absent';
+                    if (isPresent) statusClass = 'status-present';
+                    if (isLeave) statusClass = 'status-leave';
+
+                    const recDateStr = new Date(rec.date).toDateString();
+                    logContainer.innerHTML += `
+                        <div class="history-item">
+                            <span>${recDateStr}</span>
+                            <span class="${statusClass}">${rec.status}</span>
+                        </div>`;
                 });
-
-                function renderStudentLogs(start, limit) {
-                    let html = '';
-                    let slice = sortedRecords.slice(start, start + limit);
-                    slice.forEach(rec => {
-                        const statusUpper = rec.status.toUpperCase();
-                        let statusClass = 'status-absent';
-                        if (statusUpper === 'PRESENT') statusClass = 'status-present';
-                        else if (statusUpper === 'LEAVE') statusClass = 'status-leave';
-
-                        const recDateStr = new Date(rec.date).toDateString();
-                        html += `
-                            <div class="history-item">
-                                <span>${recDateStr}</span>
-                                <span class="${statusClass}">${rec.status}</span>
-                            </div>`;
-                    });
-
-                    const temp = document.createElement('div');
-                    temp.innerHTML = html;
-                    while (temp.firstChild) logContainer.appendChild(temp.firstChild);
-
-                    if (start + limit < sortedRecords.length) {
-                        let btn = document.createElement('button');
-                        btn.className = 'submit-btn';
-                        btn.innerText = 'Load More';
-                        btn.style.marginTop = '10px';
-                        btn.onclick = () => {
-                            btn.remove();
-                            renderStudentLogs(start + limit, limit);
-                        };
-                        logContainer.appendChild(btn);
-                    }
-                }
-                
-                renderStudentLogs(0, 50);
 
                 const total = p + a;
                 document.getElementById('perc').innerText = total > 0 ? ((p / total) * 100).toFixed(1) + "%" : "0%";
@@ -532,50 +497,31 @@
 
             const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
 
-            function renderGridPage(start, limit) {
-                let slice = sortedDates.slice(start, start + limit);
-                let frag = document.createDocumentFragment();
-                slice.forEach(date => {
-                    const records = groupedByDate[date];
-                    let p = 0, a = 0, l = 0;
-                    
-                    records.forEach(r => {
-                        const st = r.status.toUpperCase();
-                        if(st === 'PRESENT') p++; 
-                        else if(st === 'LEAVE') l++; 
-                        else a++;
-                    });
-
-                    const box = document.createElement('div');
-                    box.className = 'stat-card date-box';
-                    box.innerHTML = `
-                        <h3 style="margin: 0; color: #2c3e50; text-align: left;">📅 ${date}</h3>
-                        <div class="date-stats">
-                            <div style="color: #34495e;"><b>${records.length}</b><br>Total Students</div>
-                            <div style="color: #27ae60;"><b>${p}</b><br>Present</div>
-                            <div style="color: #e74c3c;"><b>${a}</b><br>Absent</div>
-                            <div style="color: #f39c12;"><b>${l}</b><br>Leave</div>
-                        </div>
-                    `;
-                    box.onclick = () => renderDayView(date, records);
-                    frag.appendChild(box);
+            sortedDates.forEach(date => {
+                const records = groupedByDate[date];
+                let p = 0, a = 0, l = 0;
+                
+                records.forEach(r => {
+                    const st = r.status.toUpperCase();
+                    if(st === 'PRESENT') p++; 
+                    else if(st === 'LEAVE') l++; 
+                    else a++;
                 });
-                grid.appendChild(frag);
 
-                if (start + limit < sortedDates.length) {
-                    let btn = document.createElement('button');
-                    btn.className = 'submit-btn';
-                    btn.innerText = 'Load More Dates';
-                    btn.style.marginTop = '10px';
-                    btn.onclick = () => {
-                        btn.remove();
-                        renderGridPage(start + limit, limit);
-                    };
-                    grid.appendChild(btn);
-                }
-            }
-            
-            renderGridPage(0, 15);
+                const box = document.createElement('div');
+                box.className = 'stat-card date-box';
+                box.innerHTML = `
+                    <h3 style="margin: 0; color: #2c3e50; text-align: left;">📅 ${date}</h3>
+                    <div class="date-stats">
+                        <div style="color: #34495e;"><b>${records.length}</b><br>Total Students</div>
+                        <div style="color: #27ae60;"><b>${p}</b><br>Present</div>
+                        <div style="color: #e74c3c;"><b>${a}</b><br>Absent</div>
+                        <div style="color: #f39c12;"><b>${l}</b><br>Leave</div>
+                    </div>
+                `;
+                box.onclick = () => renderDayView(date, records);
+                grid.appendChild(box);
+            });
         }
 
         function renderDayView(date, records) {
@@ -587,7 +533,6 @@
             const list = document.getElementById('day-view-list');
             list.innerHTML = '';
             
-            let html = '';
             records.forEach(r => {
                 const statusUpper = r.status.toUpperCase();
                 let statusClass = 'status-absent';
@@ -596,7 +541,7 @@
 
                 const cleanEnrollment = parseInt(r.enrollment.slice(-3), 10) || r.enrollment;
                 
-                html += `
+                list.innerHTML += `
                     <div class="history-item">
                         <div>
                             <span style="color: #7f8c8d; font-size: 0.8rem;">#${cleanEnrollment}</span><br>
@@ -606,7 +551,6 @@
                     </div>
                 `;
             });
-            list.innerHTML = html;
         }
 
         function closeDayView() {
@@ -672,8 +616,7 @@
             }));
             
             studentArray.sort((a, b) => a.enrollment.localeCompare(b.enrollment));
-            
-            let html = '';
+
             studentArray.forEach(s => {
                 let color = '';
                 if (s.perc >= 70) color = '#27ae60'; 
@@ -689,9 +632,8 @@
                     <td style="color:#f39c12; font-weight:bold;">${s.leave}</td>
                     <td style="color:${color}; font-weight:bold;">${s.perc}%</td>
                 </tr>`;
-                html += row;
+                tbody.innerHTML += row;
             });
-            tbody.innerHTML = html;
         }
 
         function downloadPDF(btnElement) {
